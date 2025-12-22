@@ -212,7 +212,13 @@ export default function PettyCashModal({
   }, [isOpen, initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "miscExpense" && (parseFloat(value) > 0 || value.length > 0)) {
+      setShowMiscRemarks(true);
+    }
+
+    setFormData({ ...formData, [name]: value });
   };
   console.log(setFormData, "hhh")
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
