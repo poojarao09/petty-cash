@@ -30,6 +30,8 @@ export default function CashTally({
     retail1: "",
     retailGpay: "",
     retailCard: "",
+    retailPhonePe: "",
+    retailPaytm: "",
     expense: "",
     wsCashBillingAmount: "",
     wsCreditBillingAmount: "",
@@ -42,6 +44,9 @@ export default function CashTally({
     ws10: "",
     ws1: "",
     wsGpayCard: "",
+    wsPhonePe: "",
+    wsPaytm: "",
+    wsCard: "",
     homeDelivery: "",
     retail1500: "",
     retail2200: "",
@@ -50,6 +55,7 @@ export default function CashTally({
     retail520: "",
     retail610: "",
     retail71: "",
+    expenseGpayCard: "",
     voidSale: "",
   });
 
@@ -63,7 +69,7 @@ export default function CashTally({
       const scriptUrl = "https://script.google.com/macros/s/AKfycbx5dryxS1R5zp6myFfUlP1QPimufTqh5hcPcFMNcAJ-FiC-hyQL9mCkgHSbLkOiWTibeg/exec";
       const response = await fetch(`${scriptUrl}?sheetName=Login&action=getSheetData`);
       const result = await response.json();
-  
+
       if (result.success && Array.isArray(result.data)) {
         const employeeNames = result.data.map((row: any[]) => row[0]).filter((name) => !!name);
         setEmployees(employeeNames);
@@ -91,6 +97,8 @@ export default function CashTally({
           retail1: "",
           retailGpay: "",
           retailCard: "",
+          retailPhonePe: "",
+          retailPaytm: "",
           expense: "",
           wsCashBillingAmount: "",
           wsCreditBillingAmount: "",
@@ -103,6 +111,9 @@ export default function CashTally({
           ws10: "",
           ws1: "",
           wsGpayCard: "",
+          wsPhonePe: "",
+          wsPaytm: "",
+          wsCard: "",
           homeDelivery: "",
           retail1500: "",
           retail2200: "",
@@ -111,6 +122,7 @@ export default function CashTally({
           retail520: "",
           retail610: "",
           retail71: "",
+          expenseGpayCard: "",
           voidSale: "",
         });
       } fetchEmployees();
@@ -129,6 +141,8 @@ export default function CashTally({
       parseFloat(formData.retail1) || 0,
       parseFloat(formData.retailGpay) || 0,
       parseFloat(formData.retailCard) || 0,
+      parseFloat(formData.retailPhonePe) || 0,
+      parseFloat(formData.retailPaytm) || 0,
       parseFloat(formData.expense) || 0,
       parseFloat(formData.wsCashBillingAmount) || 0,
       parseFloat(formData.wsCreditBillingAmount) || 0,
@@ -141,6 +155,9 @@ export default function CashTally({
       parseFloat(formData.ws10) || 0,
       parseFloat(formData.ws1) || 0,
       parseFloat(formData.wsGpayCard) || 0,
+      parseFloat(formData.wsPhonePe) || 0,
+      parseFloat(formData.wsPaytm) || 0,
+      parseFloat(formData.wsCard) || 0,
       parseFloat(formData.homeDelivery) || 0,
       parseFloat(formData.retail1500) || 0,
       parseFloat(formData.retail2200) || 0,
@@ -149,6 +166,7 @@ export default function CashTally({
       parseFloat(formData.retail520) || 0,
       parseFloat(formData.retail610) || 0,
       parseFloat(formData.retail71) || 0,
+      parseFloat(formData.expenseGpayCard) || 0,
       parseFloat(formData.voidSale) || 0,
     ].reduce((acc, val) => acc + val, 0);
     setTotalAmount(sum);
@@ -169,10 +187,10 @@ export default function CashTally({
         console.error("Error fetching employees:", error);
       }
     };
-  
+
     if (isOpen) {
       fetchEmployees();
-      
+
     }
   }, [isOpen]);
 
@@ -199,11 +217,35 @@ export default function CashTally({
         hour12: true
       });
 
+      // Generate Cash Tally ID
+      const sheetName = `Cash Tally Counter ${counter}`;
+      const scriptUrl = "https://script.google.com/macros/s/AKfycbx5dryxS1R5zp6myFfUlP1QPimufTqh5hcPcFMNcAJ-FiC-hyQL9mCkgHSbLkOiWTibeg/exec";
+
+      let generatedId = '';
+
+      try {
+        // Fetch the last ID from the sheet
+        const idResponse = await fetch(`${scriptUrl}?sheetName=${encodeURIComponent(sheetName)}&action=getLastId`);
+        const idResult = await idResponse.json();
+
+        if (idResult.success && idResult.lastId) {
+          const lastNumber = parseInt(idResult.lastId.split('-')[1]) || 0;
+          generatedId = `CT-${String(lastNumber + 1).padStart(2, '0')}`;
+        } else {
+          generatedId = `CT-01`;
+        }
+      } catch (error) {
+        console.error("Error generating ID:", error);
+        generatedId = `CT-01`;
+      }
+
+
       const rowData = [
-        timestamp,
-        formData.date,
-        formData.name,
-        formData.retailScanAmount,
+        timestamp,                      // Column A: Timestamp (auto-generated)
+        generatedId,                    // Column B: Cash Tally ID
+        formData.date,                  // Column C: Date
+        formData.name,                  // Column D: Employee Name
+        formData.retailScanAmount,      // Column E: Scan Amount
         formData.retail500,
         formData.retail200,
         formData.retail100,
@@ -212,6 +254,8 @@ export default function CashTally({
         formData.retail10,
         formData.retail1,
         formData.retailGpay,
+        formData.retailPhonePe,
+        formData.retailPaytm,
         formData.retailCard,
         formData.wsCashBillingAmount,
         formData.wsCreditBillingAmount,
@@ -224,6 +268,9 @@ export default function CashTally({
         formData.ws10,
         formData.ws1,
         formData.wsGpayCard,
+        formData.wsPhonePe,
+        formData.wsPaytm,
+        formData.wsCard,
         formData.expense,
         formData.homeDelivery,
         formData.retail1500,
@@ -234,11 +281,11 @@ export default function CashTally({
         formData.retail610,
         formData.retail71,
         formData.wsGpayCard,
+        formData.expenseGpayCard,
         formData.voidSale
       ];
 
-      const sheetName = `Cash Tally Counter ${counter}`;
-      const scriptUrl = "https://script.google.com/macros/s/AKfycbx5dryxS1R5zp6myFfUlP1QPimufTqh5hcPcFMNcAJ-FiC-hyQL9mCkgHSbLkOiWTibeg/exec";
+
 
       const formDataToSend = new URLSearchParams({
         sheetName: sheetName,
@@ -285,7 +332,7 @@ export default function CashTally({
     }
   };
 
- 
+
 
   if (!isOpen) return null;
 
@@ -330,22 +377,22 @@ export default function CashTally({
                 </div>
 
                 <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">
-    Employee Name <span className="text-red-500">*</span>
-  </label>
-  <select
-    name="name"
-    value={formData.name}
-    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2a5298] focus:border-transparent transition-all bg-white"
-    required
-  >
-    <option value="">Select employee</option>
-    {employees.map((emp, index) => (
-      <option key={index} value={emp}>{emp}</option>
-    ))}
-  </select>
-</div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Employee Name <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2a5298] focus:border-transparent transition-all bg-white"
+                    required
+                  >
+                    <option value="">Select employee</option>
+                    {employees.map((emp, index) => (
+                      <option key={index} value={emp}>{emp}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -486,6 +533,30 @@ export default function CashTally({
                     placeholder="0.00"
                     step="0.01"
                     min="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">PhonePe</label>
+                  <input
+                    type="text"
+                    name="retailPhonePe"
+                    value={formData.retailPhonePe}
+                    onChange={handleChange}
+                    placeholder="Enter PhonePe details"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Paytm</label>
+                  <input
+                    type="text"
+                    name="retailPaytm"
+                    value={formData.retailPaytm}
+                    onChange={handleChange}
+                    placeholder="Enter Paytm details"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                   />
                 </div>
@@ -639,6 +710,44 @@ export default function CashTally({
                     type="number"
                     name="wsGpayCard"
                     value={formData.wsGpayCard}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">PhonePe</label>
+                  <input
+                    type="text"
+                    name="wsPhonePe"
+                    value={formData.wsPhonePe}
+                    onChange={handleChange}
+                    placeholder="Enter PhonePe details"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Paytm</label>
+                  <input
+                    type="text"
+                    name="wsPaytm"
+                    value={formData.wsPaytm}
+                    onChange={handleChange}
+                    placeholder="Enter Paytm details"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Card Payments</label>
+                  <input
+                    type="number"
+                    name="wsCard"
+                    value={formData.wsCard}
                     onChange={handleChange}
                     placeholder="0.00"
                     step="0.01"

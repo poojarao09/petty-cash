@@ -399,6 +399,8 @@ export default function Dashboard() {
     "Cash Tally Counter 3",
   ];
 
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+
   const [selectedTallySheet, setSelectedTallySheet] = useState<string>("All");
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string } | null>(null);
   useEffect(() => {
@@ -419,7 +421,7 @@ export default function Dashboard() {
   const scriptUrl =
     "https://script.google.com/macros/s/AKfycbx5dryxS1R5zp6myFfUlP1QPimufTqh5hcPcFMNcAJ-FiC-hyQL9mCkgHSbLkOiWTibeg/exec";
 
-  const fetchStatsAndExpenses = async (sheetName: string, userName: string | null = null, userRole: string | null = null) => {
+  const fetchStatsAndExpenses = async (sheetName: string, userName: string | null = null, userRole: string | null = null, month: string) => {
     try {
       const dataRes = await fetch(
         `${scriptUrl}?sheet=${encodeURIComponent(sheetName)}&action=fetch`
@@ -449,6 +451,10 @@ export default function Dashboard() {
 
         // Calculate stats
         for (const row of filteredRows) {
+          // Filter by Month (assuming row[2] is YYYY-MM-DD)
+          const rowDate = row[2] ? row[2].toString() : "";
+          if (!rowDate.startsWith(month)) continue;
+
           openingBal += parseFloat(row[3]) || 0;
           for (let i = 5; i <= 25; i++) {
             expensesSum += parseFloat(row[i]) || 0;
@@ -487,7 +493,7 @@ export default function Dashboard() {
     }
   }, []);
 
-  const fetchMultipleTallyStats = async (sheets: string[], userName: string | null, userRole: string | null) => {
+  const fetchMultipleTallyStats = async (sheets: string[], userName: string | null, userRole: string | null, month: string) => {
     let totalOpeningBal = 0;
     let totalExpensesSum = 0;
 
@@ -512,6 +518,10 @@ export default function Dashboard() {
           // Admin ke liye NO filter
 
           for (const row of filteredRows) {
+            // Filter by Month
+            const rowDate = row[2] ? row[2].toString() : "";
+            if (!rowDate.startsWith(month)) continue;
+
             totalOpeningBal += parseFloat(row[3]) || 0;
             for (let i = 5; i <= 25; i++) {
               totalExpensesSum += parseFloat(row[i]) || 0;
@@ -540,20 +550,20 @@ export default function Dashboard() {
           sheetName = "Patty Expence";
           await Promise.all([
             fetchTransactions(sheetName),
-            fetchStatsAndExpenses(sheetName, currentUser.name, currentUser.role)
+            fetchStatsAndExpenses(sheetName, currentUser.name, currentUser.role, selectedMonth)
           ]);
         } else {
           if (selectedTallySheet === "All") {
             const sheetsToFetch = tallySheets.filter(s => s !== "All");
             await Promise.all([
               fetchTransactions(sheetsToFetch),
-              fetchMultipleTallyStats(sheetsToFetch, currentUser.name, currentUser.role)
+              fetchMultipleTallyStats(sheetsToFetch, currentUser.name, currentUser.role, selectedMonth)
             ]);
           } else {
             sheetName = selectedTallySheet;
             await Promise.all([
               fetchTransactions(sheetName),
-              fetchStatsAndExpenses(sheetName, currentUser.name, currentUser.role)
+              fetchStatsAndExpenses(sheetName, currentUser.name, currentUser.role, selectedMonth)
             ]);
           }
         }
@@ -563,7 +573,7 @@ export default function Dashboard() {
     };
 
     loadData();
-  }, [activeTab, selectedTallySheet, currentUser]);
+  }, [activeTab, selectedTallySheet, currentUser, selectedMonth]);
   const fetchTransactions = async (sheetNames: string | string[]) => {
     setIsLoading(true);
 
@@ -682,24 +692,28 @@ export default function Dashboard() {
     if (activeTab === "patty") {
       sheetName = "Patty Expence";
       fetchTransactions(sheetName);
-      fetchStatsAndExpenses(sheetName); // <--- Ab yahi aggregate ka logic hai!
+      fetchStatsAndExpenses(sheetName, currentUser?.name || null, currentUser?.role || null, selectedMonth);
     } else {
       if (selectedTallySheet === "All") {
         const sheetsToFetch = tallySheets.filter(s => s !== "All");
         fetchTransactions(sheetsToFetch);
-        fetchStatsAndExpenses(sheetsToFetch[0]);
+        fetchMultipleTallyStats(sheetsToFetch, currentUser?.name || null, currentUser?.role || null, selectedMonth);
       } else {
         sheetName = selectedTallySheet;
         fetchTransactions(sheetName);
-        fetchStatsAndExpenses(sheetName);
+        fetchStatsAndExpenses(sheetName, currentUser?.name || null, currentUser?.role || null, selectedMonth);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedTallySheet]);
+  }, [activeTab, selectedTallySheet, selectedMonth]);
 
-  const filteredTransactions = activeTab === "tally" && selectedTallySheet !== "All"
-    ? transactions.filter(t => t.sheetName === selectedTallySheet)
-    : transactions;
+  const filteredTransactions = transactions.filter(t => {
+    const matchesSheet = activeTab === "tally" && selectedTallySheet !== "All"
+      ? t.sheetName === selectedTallySheet
+      : true;
+    const matchesMonth = t.date.startsWith(selectedMonth);
+    return matchesSheet && matchesMonth;
+  });
 
   const totalTransactions = filteredTransactions.length;
   const averageExpense =
@@ -814,6 +828,12 @@ export default function Dashboard() {
                   <div className={`${stat.bgLight} p-2 rounded-lg`}>
                     <Icon className={`${stat.textColor} text-xl`} />
                   </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-purple-500"
+                  />
                 </div>
                 <p className="text-xs font-medium text-gray-600 mb-1">
                   {stat.title}
@@ -912,18 +932,20 @@ export default function Dashboard() {
         transactions={filteredTransactions}
         editingStatusId={editingStatusId}
         tempStatus={tempStatus}
-        onEditStatus={setEditingStatusId ? (id, status) => {
+        onEditStatus={(id, status) => {
           setEditingStatusId(id);
           setTempStatus(status);
-        } : undefined}
+        }}
         onStatusChange={setTempStatus}
+        onSaveStatus={async () => { setEditingStatusId(null); }}
+        onCancelStatusEdit={() => { setEditingStatusId(null); setTempStatus(""); }}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         selectedTallyOption={activeTab === "tally" ? selectedTallySheet : ""}
         onTallyOptionChange={setSelectedTallySheet}
         isLoading={isLoading}
       />
-      <br/>
+      <br />
     </div>
   );
 }

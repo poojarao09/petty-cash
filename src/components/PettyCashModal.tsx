@@ -7,11 +7,25 @@ import {
   FaGasPump,
   FaShoppingBag,
   FaCreditCard,
+  FaPlus,
+  FaTrash,
 } from "react-icons/fa";
+
+interface OtherExpenseEntry {
+  advance: string;
+  advanceName: string;
+  breakage: string;
+  breakageName: string;
+  shopNameOne: string;
+  shopAmountOne: string;
+  medicalPersonName: string;
+  medicalAmount: string;
+}
 
 interface CategoryAmounts {
   id?: string;
   username: string;
+  shopName: string;
   openingQty: string;
   teaNasta: string;
   waterJar: string;
@@ -22,16 +36,12 @@ interface CategoryAmounts {
   repairMaintenance: string;
   stationary: string;
   incentive: string;
-  breakage: string;
-  breakageName: string;
-  petrol: string;
-  advance: string;
-  advanceName: string;
   excisePolice: string;
   desiBhada: string;
   otherPurchaseVoucherNo: string;
   otherVendorPayment: string;
   differenceAmount: string;
+  petrol: string;
   patilPetrol: string;
   roomExpense: string;
   officeExpense: string;
@@ -39,6 +49,8 @@ interface CategoryAmounts {
   miscExpense: string;
   closing: string;
   creditCardCharges: string;
+  otherExpenses: OtherExpenseEntry[];
+  miscRemarks: string;
 
   transactionStatus: string;
 
@@ -61,6 +73,7 @@ export default function PettyCashModal({
   const [formData, setFormData] = useState<CategoryAmounts>({
     id: "",
     username: "",
+    shopName: "",
     openingQty: "",
     teaNasta: "",
     waterJar: "",
@@ -71,16 +84,12 @@ export default function PettyCashModal({
     repairMaintenance: "",
     stationary: "",
     incentive: "",
-    breakage: "",
-    breakageName: "",
-    petrol: "",
-    advance: "",
-    advanceName: "",
     excisePolice: "",
     desiBhada: "",
     otherPurchaseVoucherNo: "",
     otherVendorPayment: "",
     differenceAmount: "",
+    petrol: "",
     patilPetrol: "",
     roomExpense: "",
     officeExpense: "",
@@ -88,6 +97,8 @@ export default function PettyCashModal({
     miscExpense: "",
     closing: "",
     creditCardCharges: "",
+    otherExpenses: [],
+    miscRemarks: "",
 
     transactionStatus: "Pending",
     date: new Date().toISOString().split("T")[0],
@@ -95,10 +106,20 @@ export default function PettyCashModal({
 
   const [totalAmount, setTotalAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [fetchedUsers, setFetchedUsers] = useState<string[]>([]); // New state
+  const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
+  const [showMiscRemarks, setShowMiscRemarks] = useState(false);
 
 
   useEffect(() => {
+    const otherExpensesTotal = formData.otherExpenses.reduce(
+      (sum, entry) => sum +
+        (parseFloat(entry.advance) || 0) +
+        (parseFloat(entry.breakage) || 0) +
+        (parseFloat(entry.shopAmountOne) || 0) +
+        (parseFloat(entry.medicalAmount) || 0),
+      0
+    );
+
     const sum = [
       parseFloat(formData.openingQty) || 0,
       parseFloat(formData.teaNasta) || 0,
@@ -110,13 +131,11 @@ export default function PettyCashModal({
       parseFloat(formData.repairMaintenance) || 0,
       parseFloat(formData.stationary) || 0,
       parseFloat(formData.incentive) || 0,
-      parseFloat(formData.breakage) || 0,
-      parseFloat(formData.petrol) || 0,
-      parseFloat(formData.advance) || 0,
       parseFloat(formData.excisePolice) || 0,
       parseFloat(formData.desiBhada) || 0,
       parseFloat(formData.otherVendorPayment) || 0,
       parseFloat(formData.differenceAmount) || 0,
+      parseFloat(formData.petrol) || 0,
       parseFloat(formData.patilPetrol) || 0,
       parseFloat(formData.roomExpense) || 0,
       parseFloat(formData.officeExpense) || 0,
@@ -124,6 +143,7 @@ export default function PettyCashModal({
       parseFloat(formData.miscExpense) || 0,
       parseFloat(formData.closing) || 0,
       parseFloat(formData.creditCardCharges) || 0,
+      otherExpensesTotal,
 
     ].reduce((acc, val) => acc + val, 0);
     setTotalAmount(sum);
@@ -136,8 +156,7 @@ export default function PettyCashModal({
       const result = await response.json();
 
       if (result.success && Array.isArray(result.data)) {
-        // If your backend now sends data from row 2:
-        const usernames = result.data.map((row: any[]) => row[0]).filter((name) => !!name);
+        const usernames = result.data.map((row: any[]) => row[0]).filter((name: string) => !!name);
         setFetchedUsers(usernames);
       } else {
         console.error("Error fetching usernames:", result.error);
@@ -157,6 +176,7 @@ export default function PettyCashModal({
         setFormData({
           id: "",
           username: "",
+          shopName: "",
           openingQty: "",
           teaNasta: "",
           waterJar: "",
@@ -167,16 +187,12 @@ export default function PettyCashModal({
           repairMaintenance: "",
           stationary: "",
           incentive: "",
-          breakage: "",
-          breakageName: "",
-          petrol: "",
-          advance: "",
-          advanceName: "",
           excisePolice: "",
           desiBhada: "",
           otherPurchaseVoucherNo: "",
           otherVendorPayment: "",
           differenceAmount: "",
+          petrol: "",
           patilPetrol: "",
           roomExpense: "",
           officeExpense: "",
@@ -184,6 +200,8 @@ export default function PettyCashModal({
           miscExpense: "",
           closing: "",
           creditCardCharges: "",
+          otherExpenses: [],
+          miscRemarks: "",
 
           transactionStatus: "Pending",
           date: new Date().toISOString().split("T")[0],
@@ -201,6 +219,34 @@ export default function PettyCashModal({
     const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
     setFormData({ ...formData, [e.target.name]: value });
   };
+
+  const addOtherExpenseEntry = () => {
+    setFormData({
+      ...formData,
+      otherExpenses: [...formData.otherExpenses, {
+        advance: "",
+        advanceName: "",
+        breakage: "",
+        breakageName: "",
+        shopNameOne: "",
+        shopAmountOne: "",
+        medicalPersonName: "",
+        medicalAmount: ""
+      }]
+    });
+  };
+
+  const updateOtherExpenseEntry = (index: number, field: keyof OtherExpenseEntry, value: string) => {
+    const updated = [...formData.otherExpenses];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, otherExpenses: updated });
+  };
+
+  const removeOtherExpenseEntry = (index: number) => {
+    const updated = formData.otherExpenses.filter((_, i) => i !== index);
+    setFormData({ ...formData, otherExpenses: updated });
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,13 +282,14 @@ export default function PettyCashModal({
         }
       }
 
-      const rowData = [
+      // Base data that will be repeated for each row
+      const baseData = [
         timestamp,
         generatedId,
         formData.date,
-
         formData.openingQty,
         formData.closing,
+        formData.shopName,
         formData.teaNasta,
         formData.waterJar,
         formData.lightBill,
@@ -254,42 +301,87 @@ export default function PettyCashModal({
         formData.petrol,
         formData.patilPetrol,
         formData.incentive,
-        formData.advance,
-        formData.advanceName,
-        formData.breakage,
-        formData.breakageName,
-        formData.excisePolice,
-        formData.desiBhada,
-        formData.roomExpense,
-        formData.officeExpense,
-        formData.personalExpense,
-        formData.miscExpense,
-        formData.creditCardCharges,
-        formData.username,
-        '',
-        formData.transactionStatus
       ];
 
-      const formDataToSend = new URLSearchParams({
-        sheetName: "Patty Expence",
-        action: "insert",
-        rowData: JSON.stringify(rowData)
-      });
+      // If there are other expenses, submit one row per entry
+      // Otherwise, submit one row with empty other expense fields
+      const rowsToSubmit = formData.otherExpenses.length > 0
+        ? formData.otherExpenses.map(entry => [
+          ...baseData,
+          entry.advance,
+          entry.advanceName,
+          entry.breakage,
+          entry.breakageName,
+          entry.shopNameOne,
+          entry.shopAmountOne,
+          entry.medicalPersonName,
+          entry.medicalAmount,
+          formData.excisePolice,
+          formData.desiBhada,
+          formData.roomExpense,
+          formData.officeExpense,
+          formData.personalExpense,
+          formData.miscExpense,
+          formData.miscRemarks,
+          formData.otherPurchaseVoucherNo,
+          formData.otherVendorPayment,
+          formData.differenceAmount,
+          formData.creditCardCharges,
+          formData.username,
+          '',
+          formData.transactionStatus,
+        ])
+        : [[
+          ...baseData,
+          '', // advance
+          '', // advanceName
+          '', // breakage
+          '', // breakageName
+          '', // shopNameOne
+          '', // shopAmountOne
+          '', // medicalPersonName
+          '', // medicalAmount
+          formData.excisePolice,
+          formData.desiBhada,
+          formData.roomExpense,
+          formData.officeExpense,
+          formData.personalExpense,
+          formData.miscExpense,
+          formData.miscRemarks,
+          formData.otherPurchaseVoucherNo,
+          formData.otherVendorPayment,
+          formData.differenceAmount,
+          formData.creditCardCharges,
+          formData.username,
+          '',
+          formData.transactionStatus,
+        ]];
 
-      const response = await fetch(scriptUrl, {
-        method: "POST",
-        body: formDataToSend
-      });
+      // Submit all rows
+      for (const rowData of rowsToSubmit) {
+        const formDataToSend = new URLSearchParams({
+          sheetName: "Patty Expence",
+          action: "insert",
+          rowData: JSON.stringify(rowData)
+        });
 
-      const result = await response.json();
+        const response = await fetch(scriptUrl, {
+          method: "POST",
+          body: formDataToSend
+        });
 
-      if (result.success) {
+        const result = await response.json();
 
-        alert("Data saved successfully!");
-      } else {
-        console.error("Error:", result.error);
-        alert("Failed to save data: " + result.error);
+        if (!result.success) {
+          console.error("Error:", result.error);
+          alert("Failed to save data: " + result.error);
+          setIsLoading(false);
+          return;
+        }
       }
+
+      alert(`Data saved successfully! ${rowsToSubmit.length} row(s) submitted.`);
+      onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
       alert("Error submitting form. Please try again.");
@@ -364,6 +456,21 @@ export default function PettyCashModal({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Shop Name */}
+                <div>
+                  <label className="block mb-2 text-sm font-semibold text-gray-700">
+                    Shop Name
+                  </label>
+                  <input
+                    type="text"
+                    name="shopName"
+                    value={formData.shopName}
+                    onChange={handleNameChange} // Using handleNameChange to restrict to letters/spaces if desired, or handleChange
+                    placeholder="Enter shop name"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2a5298] focus:border-transparent transition-all bg-white"
+                  />
                 </div>
 
                 {/* Opening Qty */}
@@ -639,70 +746,6 @@ export default function PettyCashModal({
                   />
                 </div>
 
-                {/* Advance */}
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
-                    Advance
-                  </label>
-                  <input
-                    type="number"
-                    name="advance"
-                    value={formData.advance}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Advance Name */}
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
-                    Advance Name
-                  </label>
-                  <input
-                    type="text"
-                    name="advanceName"
-                    value={formData.advanceName}
-                    onChange={handleNameChange}
-                    placeholder="Enter advance name"
-                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Breakage */}
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
-                    Breakage
-                  </label>
-                  <input
-                    type="number"
-                    name="breakage"
-                    value={formData.breakage}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Breakage Name */}
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
-                    Breakage Name
-                  </label>
-                  <input
-                    type="text"
-                    name="breakageName"
-                    value={formData.breakageName}
-                    onChange={handleNameChange}
-                    placeholder="Enter breakage name"
-                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-
                 {/* Excise/Police */}
                 <div>
                   <label className="block mb-2 text-sm font-semibold text-gray-700">
@@ -790,9 +833,18 @@ export default function PettyCashModal({
 
                 {/* Misc. Expense */}
                 <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
-                    Miscellaneous
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-semibold text-gray-700">
+                      Miscellaneous
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowMiscRemarks(!showMiscRemarks)}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {showMiscRemarks ? "Hide Remarks" : "Add Remarks"}
+                    </button>
+                  </div>
                   <input
                     type="number"
                     name="miscExpense"
@@ -801,8 +853,180 @@ export default function PettyCashModal({
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-2"
                   />
+                  {showMiscRemarks && (
+                    <input
+                      type="text"
+                      name="miscRemarks"
+                      value={formData.miscRemarks}
+                      onChange={handleChange}
+                      placeholder="Enter miscellaneous remarks"
+                      className="px-4 py-3 w-full bg-white rounded-lg border border-gray-300 transition-all focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  )}
+                </div>
+
+                {/* Dynamic Other Expenses */}
+                <div className="col-span-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="text-sm font-semibold text-gray-700">
+                      Other Expenses (Advance, Breakage, Shop, Medical)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addOtherExpenseEntry}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
+                    >
+                      <FaPlus className="text-xs" />
+                      Add Entry
+                    </button>
+                  </div>
+
+                  {formData.otherExpenses.map((entry, index) => (
+                    <div key={index} className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                        {/* Advance */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Advance
+                          </label>
+                          <input
+                            type="number"
+                            value={entry.advance}
+                            onChange={(e) => updateOtherExpenseEntry(index, "advance", e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Advance Name */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Advance Name
+                          </label>
+                          <input
+                            type="text"
+                            value={entry.advanceName}
+                            onChange={(e) => updateOtherExpenseEntry(index, "advanceName", e.target.value)}
+                            placeholder="Enter name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Breakage */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Breakage
+                          </label>
+                          <input
+                            type="number"
+                            value={entry.breakage}
+                            onChange={(e) => updateOtherExpenseEntry(index, "breakage", e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Breakage Name */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Breakage Name
+                          </label>
+                          <input
+                            type="text"
+                            value={entry.breakageName}
+                            onChange={(e) => updateOtherExpenseEntry(index, "breakageName", e.target.value)}
+                            placeholder="Enter name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Shop Name One */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Shop Name One
+                          </label>
+                          <input
+                            type="text"
+                            value={entry.shopNameOne}
+                            onChange={(e) => updateOtherExpenseEntry(index, "shopNameOne", e.target.value)}
+                            placeholder="Enter shop name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Shop Amount One */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Shop Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={entry.shopAmountOne}
+                            onChange={(e) => updateOtherExpenseEntry(index, "shopAmountOne", e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Medical Person Name */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Medical Person Name
+                          </label>
+                          <input
+                            type="text"
+                            value={entry.medicalPersonName}
+                            onChange={(e) => updateOtherExpenseEntry(index, "medicalPersonName", e.target.value)}
+                            placeholder="Enter person name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Medical Amount */}
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-gray-600">
+                            Medical Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={entry.medicalAmount}
+                            onChange={(e) => updateOtherExpenseEntry(index, "medicalAmount", e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => removeOtherExpenseEntry(index)}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Remove entry"
+                        >
+                          <FaTrash />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {formData.otherExpenses.length === 0 && (
+                    <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      No other expenses added. Click "Add Entry" to add expenses like Advance, Breakage, Shop, or Medical.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
